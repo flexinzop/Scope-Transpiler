@@ -12,7 +12,7 @@ export default defineConfig({
   id,
   name: "H1 Scope Transpiler",
   description: "Import HackerOne program scopes as Caido Scope Presets",
-  version: "0.0.0",
+  version: "1.0.0",
   author: {
     name: "fl3xinz",
     email: "flexinzsec@proton.me",
