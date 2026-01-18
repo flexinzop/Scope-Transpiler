@@ -18,6 +18,9 @@
 6. The **ScopeTranspiler** icon will appear in your sidebar.
 ## Usage Guide
 
+## Demo
+![ScopeTranspiler Tutorial](media/Tutorial.gif)
+
 ### 1. Exporting from HackerOne
 
 1. Go to the HackerOne program page you are hacking on.
