@@ -2,6 +2,20 @@
 import { ref } from 'vue';
 import { useSDK } from '../plugins/sdk';
 
+interface HackerOneAsset {
+  host: string;
+  type: string;
+}
+
+interface HackerOneScope {
+  target?: {
+    scope?: {
+      include?: HackerOneAsset[];
+      exclude?: HackerOneAsset[];
+    }
+  }
+}
+
 const sdk = useSDK();
 const inScope = ref('');
 const outScope = ref('');
@@ -28,26 +42,28 @@ const handleFileSelect = (event: Event) => {
 const inScopeCount = ref(0);
 const outScopeCount = ref(0);
 
-const processScope = (data: any) => {
+const processScope = (data: HackerOneScope) => {
   const clean = (host: string) => host.replace(/^\^/, '').replace(/\$$/, '').replace(/\\\./g, '.').replace(/\.\*/g, '*');
 
-  const includes = data.target?.scope?.include || [];
-  const excludes = data.target?.scope?.exclude || [];
+  // Usando nullish coalescing (??) para evitar erros de expressão booleana estrita
+  const includes = data.target?.scope?.include ?? [];
+  const excludes = data.target?.scope?.exclude ?? [];
 
-  const cleanedIncludes = Array.from(new Set(includes.map((i: any) => clean(i.host))));
-  const cleanedExcludes = Array.from(new Set(excludes.map((e: any) => clean(e.host))));
+  // Tipando explicitamente os itens do map
+  const cleanedIncludes = includes.map((i: HackerOneAsset) => clean(i.host));
+  const cleanedExcludes = excludes.map((e: HackerOneAsset) => clean(e.host));
 
-  // Add Scope Counting
+  inScope.value = Array.from(new Set(cleanedIncludes)).join('\n');
+  outScope.value = Array.from(new Set(cleanedExcludes)).join('\n');
+  
+  // Atualiza contadores (se você os incluiu)
   inScopeCount.value = cleanedIncludes.length;
   outScopeCount.value = cleanedExcludes.length;
 
-  inScope.value = cleanedIncludes.join('\n');
-  outScope.value = cleanedExcludes.join('\n');
-  
   sdk.window.showToast("Arquivo processado com sucesso!", { variant: "success" });
 };
 
-const presetName = ref('H1 Program Scope'); // Nome padrão
+const presetName = ref('H1 Program Scope'); // Default Name (placeholder)
 
 const createPreset = async () => {
   if (!inScope.value && !outScope.value) {
@@ -67,7 +83,7 @@ const createPreset = async () => {
     });
 
     if (scope !== undefined) {
-      sdk.window.showToast(`Create "${scope.name}" preset successfully!`, { variant: "success" });
+      sdk.window.showToast(`Created "${scope.name}" preset successfully!`, { variant: "success" });
     }
   } catch (err) {
     sdk.window.showToast("Error creating Caido Scope preset", { variant: "error" });
@@ -78,7 +94,7 @@ const createPreset = async () => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-6 p-6 bg-[#30333b] text-[#e0e0e0] min-h-screen">
+  <div class="flex flex-col h-[calc(100vh-40px)] gap-4 p-6 bg-[#30333b] text-[#e0e0e0] overflow-hidden font-sans">
     <header class="flex justify-between items-center border-b border-[#333] pb-4">
       <h1 class="text-2xl font-bold tracking-tight">Scope Transpiler</h1>
       <div class="flex gap-2">
@@ -89,26 +105,26 @@ const createPreset = async () => {
           accept=".json"
           class="hidden"
         />
-        <label for="file-upload" class="cursor-pointer bg-[#222] hover:bg-[#333] border border-[#444] px-4 py-2 rounded text-sm transition-all">
+        <label for="file-upload" class="cursor-pointer bg-[#40b363] hover:bg-[#296e3d] border border-[#444] px-4 py-2 rounded text-sm transition-all">
           Choose H1 JSON
         </label>
       </div>
     </header>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div class="bg-[#1e1e1e] border-l-4 border-[#3b82f6] p-4 rounded-md shadow-lg">
+      <div class="bg-[#343840] border-l-4 border-[#3b82f6] p-4 rounded-md shadow-lg">
         <p class="text-[10px] uppercase font-bold text-gray-400 tracking-widest">Included Hosts</p>
         <p class="text-4xl font-mono mt-1 text-white">{{ inScopeCount }}</p>
       </div>
       
-      <div class="bg-[#1e1e1e] border-l-4 border-[#f97316] p-4 rounded-md shadow-lg">
+      <div class="bg-[#343840] border-l-4 border-[#f97316] p-4 rounded-md shadow-lg">
         <p class="text-[10px] uppercase font-bold text-gray-400 tracking-widest">Excluded Hosts</p>
         <p class="text-4xl font-mono mt-1 text-white">{{ outScopeCount }}</p>
       </div>
     </div>
 
-    <div class="flex gap-3 items-center bg-[#1e1e1e] p-3 rounded-md border border-[#2e2e2e]">
-      <div class="flex-1 flex items-center bg-[#121212] border border-[#333] rounded px-3 focus-within:border-[#3b82f6] transition-all">
+    <div class="flex gap-3 items-center bg-[#343840] p-3 rounded-md border border-[#2e2e2e]">
+      <div class="flex-1 flex items-center bg-[#343840] border border-[#333] rounded px-3 focus-within:border-[#3b82f6] transition-all">
         <span class="text-xs text-gray-500 font-bold mr-2 uppercase">Name:</span>
         <input 
           v-model="presetName" 
@@ -127,11 +143,11 @@ const createPreset = async () => {
     <div class="grid grid-cols-2 gap-6 flex-1">
       <section class="flex flex-col gap-2">
         <label class="text-sm font-bold text-gray-400">In Scope (Glob)</label>
-        <textarea v-model="inScope" readonly class="flex-1 w-full bg-[#151515] border border-[#333] p-3 rounded font-mono text-sm focus:outline-none"></textarea>
+        <textarea v-model="inScope" readonly class="flex-1 w-full bg-[#272a30] border border-[#333] p-3 rounded font-mono text-sm focus:outline-none"></textarea>
       </section>
       <section class="flex flex-col gap-2">
         <label class="text-sm font-bold text-gray-400">Out of Scope (Glob)</label>
-        <textarea v-model="outScope" readonly class="flex-1 w-full bg-[#151515] border border-[#333] p-3 rounded font-mono text-sm focus:outline-none"></textarea>
+        <textarea v-model="outScope" readonly class="flex-1 w-full bg-[#272a30] border border-[#333] p-3 rounded font-mono text-sm focus:outline-none"></textarea>
       </section>
     </div>
   </div>
